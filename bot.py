@@ -270,7 +270,7 @@ async def inline_answer(inline_query: InlineQuery) -> None:
             id=result_id + 'to_all',
             title=title + ' для всех',
             input_message_content=InputTextMessageContent(
-                get_random_task('для всех', reques()))
+                get_random_task('для всех', request))
         )
 
         item_18plus = InlineQueryResultArticle(
