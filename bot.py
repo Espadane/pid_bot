@@ -270,14 +270,14 @@ async def inline_answer(inline_query: InlineQuery) -> None:
             id=result_id + 'to_all',
             title=title + ' для всех',
             input_message_content=InputTextMessageContent(
-                get_random_task('Для всех', request.capitalize()))
+                get_random_task('для всех', reques()))
         )
 
         item_18plus = InlineQueryResultArticle(
             id=result_id + '18plus',
             title=title + ' 18+',
             input_message_content=InputTextMessageContent(
-                get_random_task('18+', request.capitalize()))
+                get_random_task('18+', request))
         )
 
         await bot.answer_inline_query(inline_query.id, results=[item_all,
