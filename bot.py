@@ -262,7 +262,7 @@ async def inline_answer(inline_query: InlineQuery) -> None:
             input_message_content=InputTextMessageContent(
                 get_random_task('Для пары', request.capitalize()))
         )
-        
+
         await bot.answer_inline_query(inline_query.id, results=[item_family,
                                                                 item_18plus,
                                                                 item_couple],

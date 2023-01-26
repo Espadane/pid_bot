@@ -22,6 +22,7 @@ class Tasks(Base):
     task_body = Column(String(100), nullable=False)
     approved = Column(Integer(), default=0)
 
+
 try:
     Base.metadata.create_all(engine)
     session = Session(bind=engine)
@@ -50,7 +51,7 @@ def insert_request_to_db(task_data: dict) -> None:
 
 def get_new_task_from_db() -> dict:
     '''
-        Получаем новые не подтвержденные задания из базы 
+        Получаем новые не подтвержденные задания из базы
     '''
     try:
         new_tasks = session.query(Tasks).filter(Tasks.approved == 0).first()
@@ -66,7 +67,7 @@ async def get_new_tasks_count() -> int:
     '''
     try:
         new_tasks_count = session.query(Tasks).filter(
-                                    Tasks.approved == 0).count()
+            Tasks.approved == 0).count()
     except Exception as error:
         logger.warning(error)
 
@@ -99,17 +100,18 @@ def delete_task():
         session.commit()
     except Exception as error:
         logger.warning(error)
-    
+
+
 def get_random_task(task_category: str, task_type: str) -> str:
     '''
         получаем случайную подтвержденную задачу из базы
     '''
     tasks = session.query(Tasks).filter(Tasks.approved == 1,
-                        Tasks.task_category==task_category,
-                        Tasks.task_type==task_type).all()
+                                        Tasks.task_category == task_category,
+                                        Tasks.task_type == task_type).all()
     try:
         random_task = random.choice(tasks).task_body
-    except:
+    except BaseException:
         random_task = 'В базе нет подходящего задания'
 
     return random_task
