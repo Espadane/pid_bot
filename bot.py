@@ -17,26 +17,28 @@ dp = Dispatcher(bot, storage=MemoryStorage())
 
 # keyboards
 add_task_kb = [
-    [types.KeyboardButton(text='Добавить задание')]
+    [types.KeyboardButton(text='Добавить вопрос')],
+    [types.KeyboardButton(text='Добавить действие')],
+    [types.KeyboardButton(text='Играть')],
 ]
 add_task_keyboard = types.ReplyKeyboardMarkup(keyboard=add_task_kb,
                                               resize_keyboard=True
                                               )
 
-task_type_kb = [
-    [types.KeyboardButton(text='Правда')],
-    [types.KeyboardButton(text='Действие')]
-]
-task_type_keyboard = types.ReplyKeyboardMarkup(keyboard=task_type_kb,
-                                               resize_keyboard=True)
-
 category_task_kb = [
-    [types.KeyboardButton(text='Для всей семьи')],
+    [types.KeyboardButton(text='Для всех')],
     [types.KeyboardButton(text='18+')],
-    [types.KeyboardButton(text='Для пары')]
 ]
 category_task_keyboard = types.ReplyKeyboardMarkup(keyboard=category_task_kb,
                                                    resize_keyboard=True)
+
+type_task_kb = [
+    [types.KeyboardButton(text='Правда')],
+    [types.KeyboardButton(text='Действие')]
+]
+
+type_task_keyboard = types.ReplyKeyboardMarkup(keyboard=type_task_kb,
+                                               resize_keyboard=True)
 
 approve_task_kb = [
     [types.KeyboardButton(text='Подтвердить')],
@@ -52,7 +54,6 @@ class AddTask(StatesGroup):
     """
     Состояния добавления задач
     """
-    task_type = State()
     task_category = State()
     task_body = State()
 
@@ -63,6 +64,13 @@ class ApproveTaks(StatesGroup):
     """
     choose_status = State()
     write_comment = State()
+    
+class PlayGame(StatesGroup):
+    """
+        Состояния игры
+    """
+    choose_category = State()
+    choose_type = State()
 
 
 @dp.message_handler(commands=['start', 'help'])
@@ -71,18 +79,17 @@ async def start_command(msg: types.Message) -> None:
     Обработка комманд start и help
     """
 
-    await msg.answer('Бот создан для игры в "Правда или Действие".\
-Правила просты участники по очереди выбирают "правда", то есть ответить на вопрос или\
-"действие", то есть выполнить какое-либо задание других участников.\
-Остальные детали правил уточняются участниками.\nБот работает в \
-inline режиме, то есть в любом чате или группе надо написать\
-"@pravdadelobot ..." на месте точек правда или действие. Бот пришлет \
-задание.\n Так же есть возможность придумывать свои вопросы и \
-задания. Для этого надо нажать на соответствующую кнопку и ответить\
-на вопросы. После того как администратор бота его одобрит, вопрос\
-добавится в бота, а вам придет уведомление. Для отмены добавления \
-напишите в чат "отмена" или команду "\\cancel"',
-                     reply_markup=add_task_keyboard)
+    await msg.answer('Бот создан для игры в "Правда или Действие". Правила \
+просты: участники по очереди выбирают "правда" (ответить на вопрос) или \
+"действие" (выполнить задание других участников). Остальные детали правил \
+уточняются участниками. Бот работает в inline режиме, то есть в любом чате \
+или группе надо написать"@pradelbot ...", на месте точек - правда или \
+действие. Бот пришлет задание. Либо в чате с ботом можно нажать кнопку \
+"Играть". Есть возможность придумывать свои вопросы и \
+задания, для этого надо нажать на соответствующую кнопку и ответить на \
+вопросы. После одобрения администратора, вопрос/задание добавится в бота \
+, а вам придет уведомление. Для отмены добавления напишите в чат "отмена" \
+или команду "\cancel".', reply_markup=add_task_keyboard)
 
 
 @dp.message_handler(state='*', commands='cancel')
@@ -149,25 +156,14 @@ async def process_write_comment(msg: types.Message, state=FSMContext) -> None:
     new_task = get_new_task_from_db()
     chat_id = new_task.user_id
     task_body = new_task.task_body
-    await bot.send_message(chat_id, f'Ваше задание:\n{task_body} не подходит.\
+    await bot.send_message(chat_id, f'Ваше задание:\n"{task_body}" не подходит.\
     \nПричина: {comment}\nПожалуйта исправьте недочеты, спасибо.')
     delete_task()
     await state.finish()
     await msg.answer(f'Отвергнуто. Комментарий отправлен.',
                      reply_markup=add_task_keyboard)
 
-
-@dp.message_handler(lambda msg: msg.text not in ['Правда', 'Действие'],
-                    state=AddTask.task_type)
-async def process_type_invalid(msg: types.Message) -> None:
-    """
-        Проверка на правильность выбора типа задачи
-    """
-    return await msg.answer('Выберите пожалуйста "Правда" или "Действие"')
-
-
-@dp.message_handler(lambda msg: msg.text not in ['Для всей семьи', '18+',
-                                                 'Для пары'],
+@dp.message_handler(lambda msg: msg.text not in ['Для всех', '18+'],
                     state=AddTask.task_category)
 async def process_category_invalid(msg: types.Message) -> None:
     """
@@ -177,31 +173,27 @@ async def process_category_invalid(msg: types.Message) -> None:
 
 
 @dp.message_handler(Text)
-async def text_answer(msg: types.Message) -> None:
+async def text_answer(msg: types.Message, state=FSMContext) -> None:
     """
     Обработка сообщений пользователя
     """
-    if msg.text == 'Добавить задание':
-        await AddTask.task_type.set()
-        await msg.answer('Выберите правда или действие?',
-                         reply_markup=task_type_keyboard)
+    if 'Добавить' in msg.text:
+        if 'вопрос' in msg.text:
+            task_type = 'правда'
+        elif 'действие' in msg.text:
+            task_type = 'действие'
+        await AddTask.task_category.set()
+        async with state.proxy() as data:
+            data['task_type'] = task_type
+        await msg.answer('Выберите категорию',
+                         reply_markup=category_task_keyboard)
+    elif 'Играть' in msg.text:
+        await PlayGame.choose_category.set()
+        await msg.answer('Выберите категорию', 
+                         reply_markup=category_task_keyboard)
     else:
         await msg.answer('Я не текст сообщения, да и не должен. \
         Воспользуйтесь пожалуйста коммандами. Для справки напишите "\\help"')
-
-
-@dp.message_handler(state=AddTask.task_type)
-async def process_task_type(msg: types.Message, state=FSMContext) -> None:
-    """
-        Получение типа задачи
-    """
-    async with state.proxy() as data:
-        data['task_type'] = msg.text
-
-    await AddTask.next()
-    await msg.answer('Выберите категорию:',
-                     reply_markup=category_task_keyboard)
-
 
 @dp.message_handler(state=AddTask.task_category)
 async def process_task_category(msg: types.Message, state=FSMContext) -> None:
@@ -209,13 +201,37 @@ async def process_task_category(msg: types.Message, state=FSMContext) -> None:
         Получение категории задачи
     """
     async with state.proxy() as data:
-        data['task_category'] = msg.text
+        data['task_category'] = msg.text.lower()
 
     await AddTask.next()
     await msg.answer('Напишите задание',
                      reply_markup=types.ReplyKeyboardRemove()
                      )
+    
+@dp.message_handler(state=PlayGame.choose_category)
+async def process_game_category(msg: types.Message, state=FSMContext) -> None:
+    """
+        Выбор категории для игры
+    """
+    async with state.proxy() as data:
+        data['task_category'] = msg.text.lower()
 
+    await PlayGame.next()
+    await msg.answer('Правда или дело?', reply_markup=type_task_keyboard)
+    
+@dp.message_handler(state=PlayGame.choose_type)
+async def process_game_type(msg: types.Message, state=FSMContext) -> None:
+    """
+        Выбор типа для игры
+    """
+    async with state.proxy() as data:
+        data['task_type'] = msg.text.lower()
+        
+    random_task = get_random_task(data['task_category'], data['task_type'])
+    
+    await state.finish()
+    await msg.answer(random_task, reply_markup=add_task_keyboard)
+    
 
 @dp.message_handler(state=AddTask.task_body)
 async def process_tsk_body(msg: types.Message, state=FSMContext) -> None:
@@ -242,11 +258,11 @@ async def inline_answer(inline_query: InlineQuery) -> None:
 
     if request in ['правда', 'действие']:
         title = request.capitalize()
-        item_family = InlineQueryResultArticle(
-            id=result_id + 'family',
-            title=title + ' для всей семьи',
+        item_all = InlineQueryResultArticle(
+            id=result_id + 'to_all',
+            title=title + ' для всех',
             input_message_content=InputTextMessageContent(
-                get_random_task('Для всей семьи', request.capitalize()))
+                get_random_task('Для всех', request.capitalize()))
         )
 
         item_18plus = InlineQueryResultArticle(
@@ -256,16 +272,8 @@ async def inline_answer(inline_query: InlineQuery) -> None:
                 get_random_task('18+', request.capitalize()))
         )
 
-        item_couple = InlineQueryResultArticle(
-            id=result_id + 'couple',
-            title=title + ' для пары',
-            input_message_content=InputTextMessageContent(
-                get_random_task('Для пары', request.capitalize()))
-        )
-
-        await bot.answer_inline_query(inline_query.id, results=[item_family,
-                                                                item_18plus,
-                                                                item_couple],
+        await bot.answer_inline_query(inline_query.id, results=[item_all,
+                                                                item_18plus],
                                       cache_time=1)
 
     else:
@@ -285,8 +293,6 @@ async def check_new_tasks_count() -> None:
     if new_tasks_count > 0:
         await bot.send_message(ADMIN_ID,
                                f'У вас есть {new_tasks_count} новых задач')
-    else:
-        await bot.send_message(ADMIN_ID, 'Новых не подтвержденных задач нет.')
 
 
 async def scheduller() -> None:
@@ -296,7 +302,7 @@ async def scheduller() -> None:
         await asyncio.sleep(1)
 
 
-async def on_startup(_: any) -> None:
+async def on_startup(_) -> None:
     asyncio.create_task(scheduller())
 
 if __name__ == '__main__':

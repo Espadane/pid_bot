@@ -111,7 +111,7 @@ def get_random_task(task_category: str, task_type: str) -> str:
                                         Tasks.task_type == task_type).all()
     try:
         random_task = random.choice(tasks).task_body
-    except BaseException:
+    except Exception:
         random_task = 'В базе нет подходящего задания'
 
     return random_task
