@@ -31,9 +31,9 @@ except Exception as error:
 
 
 def insert_request_to_db(task_data: dict) -> None:
-    '''
+    """
         Вставляем значения в базу данных.
-    '''
+    """
     tasks = Tasks(
         user_id=task_data['user_id'],
         user_name=task_data['user_name'],
@@ -50,9 +50,9 @@ def insert_request_to_db(task_data: dict) -> None:
 
 
 def get_new_task_from_db() -> dict:
-    '''
+    """
         Получаем новые не подтвержденные задания из базы
-    '''
+    """
     try:
         new_tasks = session.query(Tasks).filter(Tasks.approved == 0).first()
     except Exception as error:
@@ -62,9 +62,9 @@ def get_new_task_from_db() -> dict:
 
 
 async def get_new_tasks_count() -> int:
-    '''
+    """
         получаем количество новых не подтвержденных задач
-    '''
+    """
     try:
         new_tasks_count = session.query(Tasks).filter(
             Tasks.approved == 0).count()
@@ -75,9 +75,9 @@ async def get_new_tasks_count() -> int:
 
 
 def approve_task():
-    '''
+    """
         меняем статус задачи на подтверждено
-    '''
+    """
     try:
         first_task = get_new_task_from_db()
     except Exception as error:
@@ -91,9 +91,9 @@ def approve_task():
 
 
 def delete_task():
-    '''
+    """
         удаляем не подтвержденную задачу
-    '''
+    """
     try:
         fist_task = get_new_task_from_db()
         session.delete(fist_task)
@@ -103,9 +103,9 @@ def delete_task():
 
 
 def get_random_task(task_category: str, task_type: str) -> str:
-    '''
+    """
         получаем случайную подтвержденную задачу из базы
-    '''
+    """
     tasks = session.query(Tasks).filter(Tasks.approved == 1,
                                         Tasks.task_category == task_category,
                                         Tasks.task_type == task_type).all()

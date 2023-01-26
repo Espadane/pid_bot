@@ -64,7 +64,8 @@ class ApproveTaks(StatesGroup):
     """
     choose_status = State()
     write_comment = State()
-    
+
+
 class PlayGame(StatesGroup):
     """
         Состояния игры
@@ -89,7 +90,7 @@ async def start_command(msg: types.Message) -> None:
 задания, для этого надо нажать на соответствующую кнопку и ответить на \
 вопросы. После одобрения администратора, вопрос/задание добавится в бота \
 , а вам придет уведомление. Для отмены добавления напишите в чат "отмена" \
-или команду "\cancel".', reply_markup=add_task_keyboard)
+или команду "\\cancel".', reply_markup=add_task_keyboard)
 
 
 @dp.message_handler(state='*', commands='cancel')
@@ -163,6 +164,7 @@ async def process_write_comment(msg: types.Message, state=FSMContext) -> None:
     await msg.answer(f'Отвергнуто. Комментарий отправлен.',
                      reply_markup=add_task_keyboard)
 
+
 @dp.message_handler(lambda msg: msg.text not in ['Для всех', '18+'],
                     state=AddTask.task_category)
 async def process_category_invalid(msg: types.Message) -> None:
@@ -189,11 +191,12 @@ async def text_answer(msg: types.Message, state=FSMContext) -> None:
                          reply_markup=category_task_keyboard)
     elif 'Играть' in msg.text:
         await PlayGame.choose_category.set()
-        await msg.answer('Выберите категорию', 
+        await msg.answer('Выберите категорию',
                          reply_markup=category_task_keyboard)
     else:
         await msg.answer('Я не текст сообщения, да и не должен. \
         Воспользуйтесь пожалуйста коммандами. Для справки напишите "\\help"')
+
 
 @dp.message_handler(state=AddTask.task_category)
 async def process_task_category(msg: types.Message, state=FSMContext) -> None:
@@ -207,7 +210,8 @@ async def process_task_category(msg: types.Message, state=FSMContext) -> None:
     await msg.answer('Напишите задание',
                      reply_markup=types.ReplyKeyboardRemove()
                      )
-    
+
+
 @dp.message_handler(state=PlayGame.choose_category)
 async def process_game_category(msg: types.Message, state=FSMContext) -> None:
     """
@@ -218,7 +222,8 @@ async def process_game_category(msg: types.Message, state=FSMContext) -> None:
 
     await PlayGame.next()
     await msg.answer('Правда или дело?', reply_markup=type_task_keyboard)
-    
+
+
 @dp.message_handler(state=PlayGame.choose_type)
 async def process_game_type(msg: types.Message, state=FSMContext) -> None:
     """
@@ -226,12 +231,12 @@ async def process_game_type(msg: types.Message, state=FSMContext) -> None:
     """
     async with state.proxy() as data:
         data['task_type'] = msg.text.lower()
-        
+
     random_task = get_random_task(data['task_category'], data['task_type'])
-    
+
     await state.finish()
     await msg.answer(random_task, reply_markup=add_task_keyboard)
-    
+
 
 @dp.message_handler(state=AddTask.task_body)
 async def process_tsk_body(msg: types.Message, state=FSMContext) -> None:
@@ -253,6 +258,9 @@ async def process_tsk_body(msg: types.Message, state=FSMContext) -> None:
 
 @dp.inline_handler()
 async def inline_answer(inline_query: InlineQuery) -> None:
+    """
+        Инлайн кнопки
+    """
     request = inline_query.query.lower()
     result_id: str = hashlib.md5(request.encode()).hexdigest()
 
@@ -289,6 +297,9 @@ async def inline_answer(inline_query: InlineQuery) -> None:
 
 
 async def check_new_tasks_count() -> None:
+    """
+        уведомление о неподтвержденных задачах
+    """
     new_tasks_count = await get_new_tasks_count()
     if new_tasks_count > 0:
         await bot.send_message(ADMIN_ID,
@@ -296,6 +307,9 @@ async def check_new_tasks_count() -> None:
 
 
 async def scheduller() -> None:
+    """
+        каждые 30 минут уведомление о неподтвержденных задачах
+    """
     aioschedule.every(30).minutes.do(check_new_tasks_count)
     while True:
         await aioschedule.run_pending()
