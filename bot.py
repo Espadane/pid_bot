@@ -221,7 +221,7 @@ async def process_game_category(msg: types.Message, state=FSMContext) -> None:
         data['task_category'] = msg.text.lower()
 
     await PlayGame.next()
-    await msg.answer('Правда или дело?', reply_markup=type_task_keyboard)
+    await msg.answer('Правда или действие?', reply_markup=type_task_keyboard)
 
 
 @dp.message_handler(state=PlayGame.choose_type)
